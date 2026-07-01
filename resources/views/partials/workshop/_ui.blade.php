@@ -40,6 +40,7 @@
     <div style="margin-bottom:1.5rem;padding:0.75rem;background:rgba(255,200,50,0.08);border:1px solid rgba(255,200,50,0.15);border-radius:8px;">
       <p style="color:#fbbf24;font-size:0.8rem;font-weight:500;" id="upgradeLimitMsg">You've reached the limit.</p>
     </div>
+    <div id="upgradeDiscounts" style="display:none;margin-bottom:1.25rem;padding:1rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;"></div>
     <div id="upgradePlansList" style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem;"></div>
     <button id="upgradeClose" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.35);padding:0.4rem 1.5rem;border-radius:6px;font-size:0.8rem;cursor:pointer;letter-spacing:0.5px;transition:color 0.2s,border-color 0.2s;"
       onmouseover="this.style.color='rgba(255,255,255,0.7)';this.style.borderColor='rgba(255,255,255,0.25)'" onmouseout="this.style.color='rgba(255,255,255,0.35)';this.style.borderColor='rgba(255,255,255,0.12)'">Close</button>
@@ -70,6 +71,19 @@
     <div style="display:flex;gap:0.5rem;justify-content:center;">
       <button id="reqSubmit" style="background:rgba(100,140,255,0.2);border:1px solid rgba(100,140,255,0.3);color:#88aaff;padding:0.4rem 1.5rem;border-radius:6px;font-size:0.8rem;cursor:pointer;letter-spacing:0.5px;">Submit Request</button>
       <button id="reqCancel" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.35);padding:0.4rem 1.5rem;border-radius:6px;font-size:0.8rem;cursor:pointer;letter-spacing:0.5px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="claimPostModal" style="display:none;position:fixed;inset:0;z-index:62;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;">
+  <div style="background:rgba(18,18,32,0.96);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:2.5rem;max-width:420px;width:90%;text-align:center;">
+    <h3 style="color:#fff;font-weight:400;letter-spacing:0.5px;margin:0 0 0.5rem 0;font-size:1.1rem;">Claim Your Discount</h3>
+    <p style="color:rgba(255,255,255,0.4);font-size:0.8rem;margin-bottom:1.25rem;">Paste the link to your post on <strong id="claimPostLabel" style="color:#fff;"></strong></p>
+    <input id="claimPostUrl" type="url" placeholder="https://linkedin.com/in/.../post/..." style="width:100%;padding:0.55rem 0.8rem;margin-bottom:0.6rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:0.85rem;outline:none;box-sizing:border-box;">
+    <div id="claimPostError" style="color:#f87171;font-size:0.75rem;margin-bottom:0.5rem;display:none;"></div>
+    <div style="display:flex;gap:0.5rem;justify-content:center;">
+      <button id="claimPostSubmit" style="background:rgba(100,140,255,0.2);border:1px solid rgba(100,140,255,0.3);color:#88aaff;padding:0.4rem 1.5rem;border-radius:6px;font-size:0.8rem;cursor:pointer;letter-spacing:0.5px;">Submit</button>
+      <button id="claimPostCancel" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.35);padding:0.4rem 1.5rem;border-radius:6px;font-size:0.8rem;cursor:pointer;letter-spacing:0.5px;">Cancel</button>
     </div>
   </div>
 </div>

@@ -118,6 +118,16 @@ function fetchPlans() {
     .catch(() => {});
 }
 
+function fetchSocialDiscounts() {
+  fetch(SOCIAL_DISCOUNTS_URL, { headers: { 'X-CSRF-TOKEN': CSRF_TOKEN } })
+    .then(r => r.json())
+    .then(data => {
+      socialDiscountsList = data.discounts || data;
+      userPostedIds = data.posted_ids || [];
+    })
+    .catch(() => {});
+}
+
 function showUpgradeModal(type) {
   upgradeModalType = type;
   if (controls.isLocked) controls.unlock();
@@ -146,6 +156,40 @@ function showUpgradeModal(type) {
     }
   }
 
+  const discEl = document.getElementById('upgradeDiscounts');
+  if (discEl) {
+    if (socialDiscountsList.length) {
+      discEl.style.display = 'block';
+      const shareUrl = function(raw) {
+        if (!raw) return null;
+        return raw.replace('@{{URL}}', encodeURIComponent(window.location.origin));
+      };
+      discEl.innerHTML = '<div style="font-size:0.75rem;font-weight:600;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.75rem;">Get a discount — share & earn</div>' +
+        socialDiscountsList.map(d => {
+          const posted = userPostedIds.indexOf(d.id) !== -1;
+          const url = shareUrl(d.share_url);
+          return '<div style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">' +
+            '<span style="font-size:1.2rem;width:1.5rem;text-align:center;">' + (d.icon || '📱') + '</span>' +
+            '<div style="flex:1;font-size:0.8rem;color:rgba(255,255,255,0.7);">' + d.description +
+            (url ? '<br><a href="' + url + '" target="_blank" style="color:#88aaff;font-size:0.75rem;text-decoration:none;">Share on ' + d.label + ' →</a>' : '') +
+            '</div>' +
+            (posted
+              ? '<span style="font-size:0.75rem;font-weight:600;color:#34d399;white-space:nowrap;">✓ Posted</span>'
+              : '<span style="font-size:0.75rem;font-weight:600;color:#34d399;white-space:nowrap;">' + d.discount_percent + '% off</span>'
+            ) +
+            (posted ? '' : '<button class="claim-post-btn" data-discount-id="' + d.id + '" data-label="' + d.label + '" style="background:rgba(100,140,255,0.15);border:1px solid rgba(100,140,255,0.25);color:#88aaff;padding:0.25rem 0.6rem;border-radius:4px;font-size:0.7rem;cursor:pointer;white-space:nowrap;">I Posted</button>') +
+          '</div>';
+        }).join('');
+      discEl.querySelectorAll('.claim-post-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          showClaimPostForm(this.dataset.discountId, this.dataset.label);
+        });
+      });
+    } else {
+      discEl.style.display = 'none';
+    }
+  }
+
   list.innerHTML = '';
   if (userLimits && userLimits.has_pending_request) {
     const el = document.createElement('div');
@@ -153,14 +197,22 @@ function showUpgradeModal(type) {
     el.innerHTML = '<div style="font-size:1.5rem;margin-bottom:0.5rem;">⏳</div><p style="color:#fbbf24;font-size:0.85rem;font-weight:500;">Your upgrade request is pending approval.</p><p style="color:rgba(255,255,255,0.35);font-size:0.75rem;margin-top:0.25rem;">An admin will review it shortly.</p>';
     list.appendChild(el);
   } else if (plansList.length) {
+    const userDiscount = socialDiscountsList.reduce(function(sum, d) {
+      return userPostedIds.indexOf(d.id) !== -1 ? sum + (d.discount_percent || 0) : sum;
+    }, 0);
+    const hasDiscount = userDiscount > 0;
     plansList.forEach(p => {
       if (p.slug === 'free') return;
+      const price = parseFloat(p.price);
+      const discounted = price * (1 - userDiscount / 100);
       const btn = document.createElement('button');
       btn.style.cssText = 'display:flex;align-items:center;gap:0.75rem;width:100%;padding:0.75rem 1rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#e2e8f0;font-size:0.85rem;cursor:pointer;transition:all 0.2s;text-align:left;';
-      btn.innerHTML = '<span style="font-size:1.4rem;">' + p.icon + '</span><div style="flex:1;"><div style="font-weight:500;">' + p.name + '</div><div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">' + (p.max_sessions === -1 ? 'Unlimited' : p.max_sessions) + ' sessions &middot; ' + (p.max_objects_per_scene === -1 ? 'Unlimited' : p.max_objects_per_scene) + ' objects' + (p.duration_days ? ' &middot; ' + p.duration_days + ' days' : '') + '</div></div><span style="font-size:1rem;font-weight:600;color:#88aaff;">$' + parseFloat(p.price).toFixed(2) + '</span>';
+      btn.innerHTML = '<span style="font-size:1.4rem;">' + p.icon + '</span><div style="flex:1;"><div style="font-weight:500;">' + p.name + '</div><div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">' + (p.max_sessions === -1 ? 'Unlimited' : p.max_sessions) + ' sessions &middot; ' + (p.max_objects_per_scene === -1 ? 'Unlimited' : p.max_objects_per_scene) + ' objects' + (p.duration_days ? ' &middot; ' + p.duration_days + ' days' : '') + '</div></div><div style="text-align:right;">' +
+        (hasDiscount ? '<span style="font-size:0.7rem;color:rgba(255,255,255,0.3);text-decoration:line-through;">$' + price.toFixed(2) + '</span><br><span style="font-size:1rem;font-weight:600;color:#34d399;">$' + discounted.toFixed(2) + '</span>' : '<span style="font-size:1rem;font-weight:600;color:#88aaff;">$' + price.toFixed(2) + '</span>') +
+      '</div>';
       btn.addEventListener('mouseenter', () => { btn.style.borderColor = 'rgba(100,140,255,0.4)'; btn.style.background = 'rgba(100,140,255,0.08)'; });
       btn.addEventListener('mouseleave', () => { btn.style.borderColor = 'rgba(255,255,255,0.08)'; btn.style.background = 'rgba(255,255,255,0.03)'; });
-      btn.addEventListener('click', () => showRequestForm(p.id, p.name, p.icon, p.price));
+      btn.addEventListener('click', () => showRequestForm(p.id, p.name, p.icon, hasDiscount ? discounted : price));
       list.appendChild(btn);
     });
   } else {
@@ -177,7 +229,14 @@ function showRequestForm(planId, planName, planIcon, planPrice) {
   document.getElementById('upgradeModal').style.display = 'none';
   if (controls.isLocked) controls.unlock();
   const modal = document.getElementById('requestModal');
-  document.getElementById('requestPlanLabel').innerHTML = 'You selected: <strong style="color:#fff;">' + planIcon + ' ' + planName + ' ($' + parseFloat(planPrice).toFixed(2) + ')</strong>';
+  const userDiscount = socialDiscountsList.reduce(function(sum, d) {
+    return userPostedIds.indexOf(d.id) !== -1 ? sum + (d.discount_percent || 0) : sum;
+  }, 0);
+  const price = parseFloat(planPrice);
+  const labelHtml = userDiscount > 0
+    ? 'You selected: <strong style="color:#fff;">' + planIcon + ' ' + planName + '</strong><br><span style="color:#34d399;font-size:1.1rem;font-weight:600;">$' + price.toFixed(2) + '</span> <span style="color:rgba(255,255,255,0.25);font-size:0.8rem;text-decoration:line-through;">$' + (price / (1 - userDiscount / 100)).toFixed(2) + '</span> <span class="text-emerald-400" style="font-size:0.7rem;color:#34d399;">(' + userDiscount + '% off)</span>'
+    : 'You selected: <strong style="color:#fff;">' + planIcon + ' ' + planName + ' ($' + price.toFixed(2) + ')</strong>';
+  document.getElementById('requestPlanLabel').innerHTML = labelHtml;
   document.getElementById('reqError').style.display = 'none';
   document.getElementById('reqError').textContent = '';
   modal.style.display = 'flex';
@@ -223,6 +282,53 @@ function showRequestForm(planId, planName, planIcon, planPrice) {
   });
 }
 
+function showClaimPostForm(discountId, label) {
+  document.getElementById('upgradeModal').style.display = 'none';
+  if (controls.isLocked) controls.unlock();
+  const modal = document.getElementById('claimPostModal');
+  document.getElementById('claimPostLabel').textContent = label;
+  document.getElementById('claimPostError').style.display = 'none';
+  document.getElementById('claimPostError').textContent = '';
+  document.getElementById('claimPostUrl').value = '';
+  modal.style.display = 'flex';
+
+  const submitBtn = document.getElementById('claimPostSubmit');
+  const newBtn = submitBtn.cloneNode(true);
+  submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+  newBtn.addEventListener('click', function() {
+    const url = document.getElementById('claimPostUrl').value.trim();
+    if (!url) {
+      document.getElementById('claimPostError').textContent = 'Please paste your post URL.';
+      document.getElementById('claimPostError').style.display = 'block';
+      return;
+    }
+    newBtn.disabled = true;
+    newBtn.textContent = 'Submitting…';
+    fetch(SOCIAL_POSTS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+      body: JSON.stringify({ social_discount_id: discountId, post_url: url }),
+    }).then(r => r.json().then(data => ({ status: r.status, data })))
+      .then(function(res) {
+        if (res.status === 201 || res.status === 409) {
+          document.getElementById('claimPostModal').style.display = 'none';
+          alert(res.data.message || 'Post submitted! An admin will verify it.');
+          fetchSocialDiscounts();
+        } else {
+          document.getElementById('claimPostError').textContent = res.data.message || 'Failed to submit.';
+          document.getElementById('claimPostError').style.display = 'block';
+          newBtn.disabled = false;
+          newBtn.textContent = 'Submit';
+        }
+      }).catch(function() {
+        document.getElementById('claimPostError').textContent = 'Network error. Please try again.';
+        document.getElementById('claimPostError').style.display = 'block';
+        newBtn.disabled = false;
+        newBtn.textContent = 'Submit';
+      });
+  });
+}
+
 document.getElementById('upgradeClose').addEventListener('click', () => {
   document.getElementById('upgradeModal').style.display = 'none';
   if (modelLoaded && !controls.isLocked) controls.lock();
@@ -231,9 +337,14 @@ document.getElementById('reqCancel').addEventListener('click', () => {
   document.getElementById('requestModal').style.display = 'none';
   if (modelLoaded && !controls.isLocked) controls.lock();
 });
+document.getElementById('claimPostCancel').addEventListener('click', () => {
+  document.getElementById('claimPostModal').style.display = 'none';
+  if (modelLoaded && !controls.isLocked) controls.lock();
+});
 
 fetchLimits();
 fetchPlans();
+fetchSocialDiscounts();
 
 // Upload files to server
 function uploadFilesToServer(files, modelName, sessionId) {
@@ -261,6 +372,7 @@ function loadModelFiles(objFile, mtlFile, pngFile) {
 
   function finishLoad() {
     if (!_parseDone || !_uploadDone) return;
+    hideSizeHint();
     dropzone.style.display = 'none';
     instructions.classList.add('show');
     saveBtn.classList.add('show');

@@ -58,4 +58,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(UpgradeRequest::class);
     }
+
+    public function socialPosts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(UserSocialPost::class);
+    }
 }

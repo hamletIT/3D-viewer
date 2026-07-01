@@ -177,6 +177,38 @@
             </section>
         @endif
 
+        @php
+            $socialDiscounts = \App\Models\SocialDiscount::active()->get();
+        @endphp
+        @if ($socialDiscounts->count() > 0)
+        <section class="px-6 py-20 border-t border-white/5">
+            <div class="max-w-4xl mx-auto text-center">
+                <div class="text-4xl mb-6">🎉</div>
+                <h2 class="text-2xl md:text-3xl font-bold text-white/90 mb-3">Get a Discount</h2>
+                <p class="text-white/40 mb-10 max-w-lg mx-auto">Share our app on your social media and get a discount on your plan!</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+                    @foreach ($socialDiscounts as $discount)
+                        @php
+                            $shareUrl = $discount->share_url ? str_replace('{{URL}}', urlencode(config('app.url')), $discount->share_url) : null;
+                        @endphp
+                        <div class="feature-card rounded-2xl p-6 glow text-center">
+                            <div class="text-4xl mb-4">{{ $discount->icon }}</div>
+                            <h3 class="text-lg font-semibold text-white/90 mb-2">{{ $discount->label }}</h3>
+                            <p class="text-sm text-white/40 mb-4">{{ $discount->description }}</p>
+                            <span class="inline-block px-3 py-1 rounded-full bg-emerald-900/40 text-emerald-300 text-sm font-semibold">{{ $discount->discount_percent }}% OFF</span>
+                            @if ($shareUrl)
+                                <div class="mt-4">
+                                    <a href="{{ $shareUrl }}" target="_blank" class="inline-block px-4 py-2 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-xs font-medium hover:bg-indigo-600/30 transition-colors">Share on {{ $discount->label }} →</a>
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+                <p class="mt-8 text-xs text-white/20">Post about our app and get a discount applied to your plan. Contact us after posting!</p>
+            </div>
+        </section>
+        @endif
+
         @if ($scanSection?->active)
         <section class="px-6 py-20 border-t border-white/5">
             <div class="max-w-4xl mx-auto text-center">

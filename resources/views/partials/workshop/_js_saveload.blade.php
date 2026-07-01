@@ -311,6 +311,7 @@ function loadRemoteObj(objUrl, mtlUrl, modelName) {
   function sceneReady() {
     if (_sceneLoadDone) return;
     _sceneLoadDone = true;
+    hideSizeHint();
     dropzone.style.display = 'none';
     instructions.classList.add('show');
     saveBtn.classList.add('show');

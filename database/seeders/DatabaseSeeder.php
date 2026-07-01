@@ -120,6 +120,7 @@ class DatabaseSeeder extends Seeder
         $this->call(TextureSeeder::class);
         $this->call(InstructionSeeder::class);
         $this->call(LandingSectionSeeder::class);
+        $this->call(SocialDiscountSeeder::class);
 
         Manipulation::create([
             'model_name' => 'Default Cube',

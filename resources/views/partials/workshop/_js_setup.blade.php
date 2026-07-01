@@ -20,6 +20,8 @@ const SCENES_LOAD_URL = '/app/scenes';
 const PLANS_URL = '/app/plans';
 const LIMITS_URL = '/app/limits';
 const UPGRADE_REQUEST_URL = '/app/upgrade-request';
+const SOCIAL_DISCOUNTS_URL = '/app/social-discounts';
+const SOCIAL_POSTS_URL = '/app/social-posts';
 const CSRF_TOKEN = '{{ csrf_token() }}';
 const USER_NAME = '{{ auth()->user()->name }}';
 const USER_EMAIL = '{{ auth()->user()->email }}';
@@ -27,6 +29,8 @@ const USER_ROLE = '{{ auth()->user()->role }}';
 
 let userLimits = null;
 let plansList = [];
+let socialDiscountsList = [];
+let userPostedIds = [];
 let upgradeModalType = null;
 
 const splash = document.getElementById('splash');
@@ -216,6 +220,12 @@ function showSizeHint() {
   const el = document.getElementById('sizeHint');
   if (!el) return;
   el.style.display = 'block';
+}
+
+function hideSizeHint() {
+  const el = document.getElementById('sizeHint');
+  if (!el) return;
+  el.style.display = 'none';
 }
 
 function setStatsCount() {

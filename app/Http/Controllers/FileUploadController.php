@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\FileType;
 use App\Models\Manipulation;
 use App\Models\Scene;
+use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class FileUploadController extends Controller
 {
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $request->validate([
             'files' => 'required|array|min:1',
@@ -53,15 +56,33 @@ class FileUploadController extends Controller
         ], 201);
     }
 
-    public function sessions(Request $request)
+    /**
+     * @throws Exception
+     */
+    public function sessions(Request $request): JsonResponse
     {
         $user = $request->user();
+        $driver = DB::connection()->getDriverName();
+
+        $concatExpr = match ($driver) {
+            'mysql' => "GROUP_CONCAT(original_name SEPARATOR ', ')",
+            'pgsql' => "STRING_AGG(original_name, ', ')",
+            'sqlite' => "GROUP_CONCAT(original_name, ', ')",
+            default => throw new Exception("Unsupported database driver: {$driver}"),
+        };
+
+        $jsonPathExpr = match ($driver) {
+            'mysql' => 'data->>"$.save_name"',
+            'pgsql' => "data->>'save_name'",
+            'sqlite' => "json_extract(data, '$.save_name')",
+            default => throw new Exception("Unsupported database driver: {$driver}"),
+        };
 
         $sessions = FileType::where('user_id', $user->id)
             ->whereNotNull('session_id')
-            ->selectRaw('session_id, MAX(created_at) as last_upload, GROUP_CONCAT(original_name SEPARATOR \', \') as files')
+            ->selectRaw("session_id, MAX(created_at) as last_upload, {$concatExpr} as files")
             ->addSelect([
-                'save_name' => Scene::selectRaw('data->>"$.save_name"')
+                'save_name' => Scene::selectRaw($jsonPathExpr)
                     ->whereColumn('session_id', 'file_types.session_id')
                     ->where('user_id', $user->id)
                     ->limit(1)
@@ -73,7 +94,7 @@ class FileUploadController extends Controller
         return response()->json($sessions);
     }
 
-    public function sessionFiles(Request $request, string $sessionId)
+    public function sessionFiles(Request $request, string $sessionId): JsonResponse
     {
         $user = $request->user();
 
@@ -93,7 +114,7 @@ class FileUploadController extends Controller
         return response()->json($files);
     }
 
-    public function manipulations(Request $request)
+    public function manipulations(Request $request): JsonResponse
     {
         $user = $request->user();
 

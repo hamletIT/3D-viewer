@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\LandingSectionController;
 use App\Http\Controllers\Admin\ManipulationController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\SocialDiscountController;
 use App\Http\Controllers\Admin\TextureController;
 use App\Http\Controllers\Admin\UpgradeRequestController;
 use App\Http\Controllers\Admin\UserController;
@@ -49,6 +50,46 @@ Route::get('/app/plans', function () {
         \App\Models\Plan::where('active', true)->orderBy('sort_order')->get(['id', 'name', 'slug', 'max_sessions', 'max_objects_per_scene', 'price', 'icon', 'duration_days'])
     );
 })->middleware(['auth'])->name('app.plans');
+
+Route::get('/app/social-discounts', function () {
+    $user = auth()->user();
+    $discounts = \App\Models\SocialDiscount::active()->get(['id', 'platform', 'label', 'icon', 'discount_percent', 'description', 'share_url']);
+    $userPostIds = $user->socialPosts()->where('verified', true)->pluck('social_discount_id')->toArray();
+    return response()->json([
+        'discounts' => $discounts,
+        'posted_ids' => $userPostIds,
+    ]);
+})->middleware(['auth'])->name('app.social-discounts');
+
+Route::post('/app/social-posts', function (\Illuminate\Http\Request $request) {
+    $validated = $request->validate([
+        'social_discount_id' => 'required|exists:social_discounts,id',
+        'post_url' => 'nullable|string|max:500',
+    ]);
+
+    $existing = \App\Models\UserSocialPost::where('user_id', auth()->id())
+        ->where('social_discount_id', $validated['social_discount_id'])
+        ->first();
+
+    if ($existing) {
+        return response()->json(['message' => 'You already submitted a post for this platform.', 'post' => $existing], 409);
+    }
+
+    $post = \App\Models\UserSocialPost::create([
+        'user_id' => auth()->id(),
+        'social_discount_id' => $validated['social_discount_id'],
+        'post_url' => $validated['post_url'],
+        'verified' => false,
+    ]);
+
+    return response()->json(['message' => 'Post submitted for review. You will get your discount once verified.', 'post' => $post], 201);
+})->middleware(['auth'])->name('app.social-posts.store');
+
+Route::get('/app/social-posts', function () {
+    return response()->json(
+        auth()->user()->socialPosts()->with('socialDiscount')->get()
+    );
+})->middleware(['auth'])->name('app.social-posts');
 
 Route::get('/app/limits', function () {
     $user = auth()->user();
@@ -164,6 +205,19 @@ Route::middleware(['auth', 'verified', 'role:admin,moderator'])->prefix('admin')
     Route::patch('conversations/{conversation}/close', [ConversationController::class, 'close'])->name('conversations.close');
     Route::patch('conversations/{conversation}/open', [ConversationController::class, 'open'])->name('conversations.open');
 
+    Route::resource('social-discounts', SocialDiscountController::class);
+    Route::get('social-posts', function () {
+        $posts = \App\Models\UserSocialPost::with(['user', 'socialDiscount'])->latest()->paginate(20);
+        return view('admin.social_posts.index', compact('posts'));
+    })->name('social-posts.index');
+    Route::patch('social-posts/{userSocialPost}/verify', function (\App\Models\UserSocialPost $userSocialPost) {
+        $userSocialPost->update(['verified' => true, 'verified_at' => now()]);
+        return redirect()->route('admin.social-posts.index')->with('success', 'Post verified. Discount granted.');
+    })->name('social-posts.verify');
+    Route::delete('social-posts/{userSocialPost}', function (\App\Models\UserSocialPost $userSocialPost) {
+        $userSocialPost->delete();
+        return redirect()->route('admin.social-posts.index')->with('success', 'Post rejected and removed.');
+    })->name('social-posts.destroy');
     Route::resource('landing-sections', LandingSectionController::class);
     Route::post('landing-sections/{landingSection}/features', [LandingSectionController::class, 'storeFeature'])->name('landing-sections.features.store');
     Route::patch('landing-features/{landingFeature}', [LandingSectionController::class, 'updateFeature'])->name('landing-features.update');
