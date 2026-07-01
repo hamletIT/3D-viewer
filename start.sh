@@ -1,5 +1,5 @@
 #!/bin/bash
-php artisan migrate --force
+php artisan migrate --fresh
 # comment after finish seeders
 php artisan db:seed --force
 php artisan config:cache
